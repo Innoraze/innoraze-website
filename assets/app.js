@@ -1,12 +1,19 @@
+/* Innoraze site behaviour. No dependencies. Everything respects prefers-reduced-motion. */
 (function () {
   'use strict';
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
-  var onScreen = function (el, cb, threshold) {
-    if (!('IntersectionObserver' in window)) { cb(true); return; }
-    new IntersectionObserver(function (entries) { cb(entries[0].isIntersecting); }, { threshold: threshold || 0 }).observe(el);
+  var onScreen = function (el, cb, opts) {
+    if (!('IntersectionObserver' in window)) { cb(true); return function () {}; }
+    var io = new IntersectionObserver(function (entries) { cb(entries[0].isIntersecting, entries[0]); }, opts || { threshold: 0 });
+    io.observe(el);
+    return function () { io.disconnect(); };
   };
+  var once = function (el, cb, threshold) {
+    var stop = onScreen(el, function (vis) { if (vis) { stop(); cb(); } }, { threshold: threshold || 0.3 });
+  };
+  var fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
 
   /* Header ------------------------------------------------------------ */
   var header = $('[data-header]');
@@ -14,6 +21,13 @@
     var onScroll = function () { header.classList.toggle('is-scrolled', window.scrollY > 8); };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
+    var darkHero = $('[data-dark-hero]');
+    if (darkHero) {
+      onScreen(darkHero, function (vis, entry) {
+        header.classList.toggle('is-dark', vis && entry.intersectionRect.top <= 80);
+      }, { rootMargin: '-68px 0px 0px 0px', threshold: [0, 0.01] });
+      header.classList.add('is-dark');
+    }
   }
 
   var toggle = $('[data-nav-toggle]');
@@ -30,33 +44,66 @@
     });
   }
 
-  /* Hero: the match replays in the report ----------------------------- */
-  var hero = $('.hero-window');
+  /* Pointer light on product windows ---------------------------------- */
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    document.addEventListener('pointermove', function (e) {
+      var w = e.target.closest && e.target.closest('.window');
+      if (!w) return;
+      var r = w.getBoundingClientRect();
+      w.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      w.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
+  }
+
+  /* Count-up numbers ---------------------------------------------------- */
+  var countUp = function (els, duration, delay) {
+    if (reduceMotion) return;
+    els.forEach(function (el) {
+      var to = parseFloat(el.getAttribute('data-count')), dp = parseInt(el.getAttribute('data-dp') || '0', 10);
+      el.textContent = (0).toFixed(dp);
+      var start = null;
+      var tick = function (t) {
+        if (start === null) start = t + delay;
+        var p = Math.min(1, Math.max(0, (t - start) / duration));
+        var e = 1 - Math.pow(1 - p, 3);
+        el.textContent = (to * e).toFixed(dp);
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  };
+
+  /* Match report window: the match replays as it comes into view ------- */
+  var report = $('.hero-window');
   var clock = $('[data-clock]');
-  if (hero) {
-    var played = false;
+  if (report) {
+    var replayBtn = $('[data-replay]', report);
     var play = function () {
-      if (played) return;
-      played = true;
-      hero.classList.add('is-played');
-      if (reduceMotion || !clock) return;
+      report.classList.remove('is-played');
+      void report.getBoundingClientRect();
+      report.classList.add('is-played');
+      if (reduceMotion) return;
+      countUp($$('[data-count]', report), 2600, 400);
+      if (!clock) return;
       var start = null, delay = 400, length = 2600;
       var tick = function (t) {
         if (start === null) start = t;
         var p = (t - start - delay) / length;
-        if (p < 0) clock.textContent = '0\u2019';
-        else if (p < 1) clock.textContent = Math.floor(p * 90) + '\u2019';
+        if (p < 0) clock.textContent = '0’';
+        else if (p < 1) clock.textContent = Math.floor(p * 90) + '’';
         else { clock.textContent = 'Full time'; return; }
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     };
-    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
-      onScreen(hero, function (vis) { if (vis) play(); }, 0.2);
-    });
+    fontsReady.then(function () { once(report, play, 0.25); });
+    if (replayBtn && !reduceMotion) {
+      replayBtn.hidden = false;
+      replayBtn.addEventListener('click', play);
+    }
   }
 
-  /* Tabs (matchweek and sample report) -------------------------------- */
+  /* Tabs (sample report) ---------------------------------------------- */
   $$('[data-tabs]').forEach(function (root) {
     var tabs = $$('[role="tab"]', root);
     var list = $('[role="tablist"]', root);
@@ -72,52 +119,256 @@
         list.scrollTo({ left: Math.max(0, tab.offsetLeft - 20), behavior: reduceMotion ? 'auto' : 'smooth' });
       }
     };
-    root._select = select;
-    root._tabs = tabs;
     tabs.forEach(function (tab, i) {
-      tab.addEventListener('click', function () { select(tab, false); root.dispatchEvent(new CustomEvent('tabs:user')); });
+      tab.addEventListener('click', function () { select(tab, false); });
       tab.addEventListener('keydown', function (e) {
         var next = null;
         if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
         if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
         if (e.key === 'Home') next = tabs[0];
         if (e.key === 'End') next = tabs[tabs.length - 1];
-        if (next) { e.preventDefault(); select(next, true); root.dispatchEvent(new CustomEvent('tabs:user')); }
+        if (next) { e.preventDefault(); select(next, true); }
       });
     });
   });
 
-  /* Matchweek: plays through the week until someone takes over ------- */
-  var week = $('[data-week]');
-  if (week && week._select && !reduceMotion) {
-    var ctrl = $('[data-week-toggle]', week);
-    var userPaused = false, inView = false, hovering = false;
-    var sync = function () { week.classList.toggle('is-paused', userPaused || !inView || hovering); };
-    var setCtrl = function () {
-      $('[data-label]', ctrl).textContent = userPaused ? 'Play tour' : 'Pause tour';
-      ctrl.firstElementChild.className = userPaused ? 'icon-play' : 'icon-pause';
-      ctrl.setAttribute('aria-label', userPaused ? 'Play the matchweek tour' : 'Pause the matchweek tour');
+  /* Matchweek scroll story -------------------------------------------- */
+  var story = $('[data-story]');
+  if (story) {
+    var steps = $$('.story__step', story);
+    var screens = steps.map(function (s) { return $('.story__screen', s); });
+    var stage = $('[data-stage]', story);
+    screens.forEach(function (s) { s.setAttribute('data-reveal', ''); });
+    var wide = window.matchMedia('(min-width: 961px)');
+    var current = -1;
+    var setCurrent = function (i) {
+      if (i === current) return;
+      current = i;
+      steps.forEach(function (s, n) { s.classList.toggle('is-current', n === i); });
+      screens.forEach(function (s, n) {
+        s.classList.toggle('is-current', n === i);
+        if (n === i) s.classList.add('is-active');
+        else if (story.classList.contains('is-staged')) s.classList.remove('is-active');
+      });
     };
-    ctrl.hidden = false;
-    setCtrl();
-    week.classList.add('is-auto', 'is-paused');
-    week.addEventListener('animationend', function (e) {
-      if (e.animationName !== 'week-progress' || !week.classList.contains('is-auto')) return;
-      var tabs = week._tabs;
-      var i = tabs.indexOf(e.target);
-      week._select(tabs[(i + 1) % tabs.length], false);
+    var layout = function () {
+      if (wide.matches && !story.classList.contains('is-staged')) {
+        screens.forEach(function (s) { stage.appendChild(s); });
+        story.classList.add('is-staged');
+        current = -1;
+      } else if (!wide.matches && story.classList.contains('is-staged')) {
+        screens.forEach(function (s, n) { steps[n].appendChild(s); s.classList.remove('is-current'); });
+        story.classList.remove('is-staged');
+      }
+    };
+    layout();
+    if (wide.addEventListener) wide.addEventListener('change', layout);
+    var pick = function () {
+      if (story.classList.contains('is-staged')) {
+        var mid = window.innerHeight * 0.5, best = 0;
+        steps.forEach(function (s, n) { if (s.getBoundingClientRect().top < mid) best = n; });
+        setCurrent(best);
+        var list = $('.story__steps', story), r = list.getBoundingClientRect();
+        var p = Math.min(1, Math.max(0, (mid - r.top) / r.height));
+        list.style.setProperty('--progress', p.toFixed(3));
+      }
+    };
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () { ticking = false; pick(); });
+    }, { passive: true });
+    pick();
+    // On narrow screens each screen animates as it scrolls into view.
+    screens.forEach(function (s) {
+      onScreen(s, function (vis) { if (vis && !story.classList.contains('is-staged')) s.classList.add('is-active'); }, { threshold: 0.35 });
     });
-    week.addEventListener('tabs:user', function () { week.classList.remove('is-auto', 'is-paused'); ctrl.hidden = true; });
-    ctrl.addEventListener('click', function () { userPaused = !userPaused; setCtrl(); sync(); });
-    var panelArea = $$('.week__panel', week);
-    panelArea.forEach(function (p) {
-      p.addEventListener('mouseenter', function () { hovering = true; sync(); });
-      p.addEventListener('mouseleave', function () { hovering = false; sync(); });
-    });
-    onScreen(week, function (vis) { inView = vis; sync(); }, 0.35);
   }
 
-  /* Tracking replay -------------------------------------------------- */
+  /* Matchweek feed (product card) ------------------------------------- */
+  var feed = $('[data-feed]');
+  if (feed) {
+    var track = $('.feed__track', feed);
+    var items = $$('li', track);
+    var visibleCount = 3, rowH = 56, idx = 2, timer = null;
+    // Show three at a time; the newest slides in at the bottom.
+    var renderFeed = function (animate) {
+      var top = Math.max(0, idx - (visibleCount - 1));
+      track.style.transition = animate ? 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none';
+      track.style.transform = 'translateY(' + (-top * rowH) + 'px)';
+      items.forEach(function (li, n) {
+        li.classList.toggle('is-new', n === idx);
+        li.style.opacity = n > idx ? '0' : '';
+        li.style.transition = 'opacity 0.4s ease';
+      });
+    };
+    var step = function () {
+      idx++;
+      renderFeed(true);
+      if (idx >= items.length - 1) { clearInterval(timer); timer = -1; } // plays through the week once
+    };
+    track.style.transition = 'opacity 0.3s ease';
+    if (reduceMotion) { idx = 2; renderFeed(false); }
+    else {
+      renderFeed(false);
+      onScreen(feed, function (vis) {
+        if (timer === -1) return;
+        if (vis && !timer) timer = setInterval(step, 2200);
+        if (!vis && timer) { clearInterval(timer); timer = null; }
+      }, { threshold: 0.3 });
+    }
+  }
+
+  /* Recruit mini search (product card) -------------------------------- */
+  var ms = $('[data-mini-search]');
+  if (ms && !reduceMotion) {
+    var typed = $('[data-typed]', ms), results = $('[data-results]', ms);
+    var Q = [
+      { q: 'Left-footed centre-back, under 23', r: [['Player E', 92], ['Player F', 89], ['Player G', 84]] },
+      { q: 'Pressing striker, 8+ league goals', r: [['Player H', 90], ['Player J', 87], ['Player K', 81]] },
+      { q: 'Ball-winning midfielder, Nordic leagues', r: [['Player L', 93], ['Player M', 88], ['Player N', 85]] }
+    ];
+    var qi = 0, running = false, alive = false;
+    var wait = function (ms_) { return new Promise(function (res) { setTimeout(res, ms_); }); };
+    var cycle = function () {
+      if (!alive) { running = false; return; }
+      running = true;
+      var item = Q[qi % Q.length];
+      results.classList.add('is-hidden');
+      var text = item.q, n = 0;
+      typed.textContent = '';
+      var typeNext = function () {
+        if (n <= text.length) { typed.textContent = text.slice(0, n++); setTimeout(typeNext, 38); return; }
+        $$('li', results).forEach(function (li, k) {
+          var r = item.r[k];
+          li.children[0].textContent = r[0];
+          li.children[2].textContent = r[1] + '%';
+          li.querySelector('.mbar span').style.width = r[1] + '%';
+          li.style.transitionDelay = (k * 90) + 'ms';
+        });
+        wait(250).then(function () { results.classList.remove('is-hidden'); return wait(3200); })
+          .then(function () { qi++; if (qi < Q.length) cycle(); else { running = true; alive = false; } });
+      };
+      typeNext();
+    };
+    onScreen(ms, function (vis) { alive = vis; if (vis && !running) cycle(); }, { threshold: 0.4 });
+  }
+
+  /* Dashboards mini trend (product card) ------------------------------ */
+  var trendSvg = $('[data-trend]');
+  if (trendSvg) {
+    var wrap = trendSvg.closest('[data-trend-wrap]');
+    var data = trendSvg.getAttribute('data-trend').split(',').map(function (p) { return p.split('|').map(parseFloat); });
+    var x0 = +trendSvg.getAttribute('data-x0'), x1 = +trendSvg.getAttribute('data-x1');
+    var gy0 = +trendSvg.getAttribute('data-y0'), gy1 = +trendSvg.getAttribute('data-y1');
+    var X = function (i) { return x0 + (x1 - x0) * i / (data.length - 1); };
+    var Y = function (v) { return gy0 - (gy0 - gy1) * (v - 0.8) / (2.1 - 0.8); };
+    var cur = $('.trend-cursor', trendSvg), du = $('.trend-dot--us', trendSvg), dop = $('.trend-dot--opp', trendSvg);
+    var val = $('[data-trend-value]', wrap), lab = $('[data-trend-label]', wrap);
+    var show = function (i) {
+      var d = data[i], diff = d[0] - d[1];
+      cur.setAttribute('x1', X(i)); cur.setAttribute('x2', X(i));
+      du.setAttribute('cx', X(i)); du.setAttribute('cy', Y(d[0]));
+      dop.setAttribute('cx', X(i)); dop.setAttribute('cy', Y(d[1]));
+      val.textContent = (diff >= 0 ? '+' : '−') + Math.abs(diff).toFixed(2);
+      lab.textContent = 'Matchday ' + (i + 1);
+    };
+    show(data.length - 1);
+    wrap.setAttribute('data-reveal', '');
+    var sweeping = null;
+    var sweep = function () {
+      if (reduceMotion) return;
+      var start = null, dur = 2400;
+      var tick = function (t) {
+        if (start === null) start = t;
+        var p = Math.min(1, (t - start) / dur);
+        show(Math.round(p * (data.length - 1)));
+        if (p < 1) sweeping = requestAnimationFrame(tick); else sweeping = null;
+      };
+      sweeping = requestAnimationFrame(tick);
+    };
+    once(wrap, function () { wrap.classList.add('is-active'); setTimeout(sweep, 300); }, 0.4);
+    trendSvg.addEventListener('pointermove', function (e) {
+      if (sweeping) { cancelAnimationFrame(sweeping); sweeping = null; }
+      var r = trendSvg.getBoundingClientRect();
+      var vbx = (e.clientX - r.left) / r.width * 360;
+      var i = Math.round((vbx - x0) / (x1 - x0) * (data.length - 1));
+      show(Math.max(0, Math.min(data.length - 1, i)));
+    });
+    trendSvg.addEventListener('pointerleave', function () { show(data.length - 1); });
+  }
+
+  /* Recruit window: cycles through the shortlist ---------------------- */
+  $$('[data-recruit]').forEach(function (win) {
+    var players = JSON.parse(win.getAttribute('data-recruit'));
+    var buttons = $$('[data-player]', win);
+    var nameEl = $('[data-pname]', win), footEl = $('[data-pfoot]', win);
+    var vals = $$('[data-pct-val]', win), bars = $$('[data-pct-bar]', win);
+    var at = 0, timer = null, userTook = false, hover = false;
+    var select = function (i) {
+      at = i;
+      buttons.forEach(function (b, n) { b.classList.toggle('is-active', n === i); b.setAttribute('aria-pressed', String(n === i)); });
+      var p = players[i];
+      nameEl.textContent = p.n; footEl.textContent = p.f;
+      p.p.forEach(function (v, n) { vals[n].textContent = v; bars[n].style.width = v + '%'; });
+    };
+    buttons.forEach(function (b, n) {
+      b.addEventListener('click', function () { userTook = true; stop(); select(n); });
+    });
+    var start = function () {
+      if (timer || userTook || reduceMotion) return;
+      timer = setInterval(function () {
+        if (hover) return;
+        var next = (at + 1) % players.length;
+        select(next);
+        if (next === 0) { userTook = true; stop(); } // one pass through the shortlist, then rest on the top match
+      }, 3400);
+    };
+    var stop = function () { if (timer) { clearInterval(timer); timer = null; } };
+    win.addEventListener('mouseenter', function () { hover = true; });
+    win.addEventListener('mouseleave', function () { hover = false; });
+    onScreen(win, function (vis) { if (vis) start(); else stop(); }, { threshold: 0.4 });
+    // Bars grow in the first time the window is seen.
+    if (!reduceMotion) {
+      bars.forEach(function (b) { b.dataset.w = b.style.width; b.style.width = '0'; });
+      once(win, function () { bars.forEach(function (b) { b.style.width = b.dataset.w; }); }, 0.35);
+    }
+  });
+
+  /* Progress lines that fill as you scroll past them ------------------ */
+  $$('[data-path]').forEach(function (path) {
+    if (reduceMotion) return;
+    path.style.setProperty('--progress', '0');
+    var update = function () {
+      var r = path.getBoundingClientRect(), vh = window.innerHeight;
+      var p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (r.height + vh * 0.35)));
+      path.style.setProperty('--progress', p.toFixed(3));
+    };
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () { ticking = false; update(); });
+    }, { passive: true });
+    update();
+  });
+
+  /* Platform sub-navigation highlights the section you're in ---------- */
+  var subnav = $('[data-subnav]');
+  if (subnav) {
+    var links = $$('a', subnav);
+    var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+    var mark = function () {
+      var best = -1;
+      targets.forEach(function (t, n) { if (t && t.getBoundingClientRect().top < 200) best = n; });
+      links.forEach(function (a, n) { if (n === best) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+    };
+    window.addEventListener('scroll', function () { requestAnimationFrame(mark); }, { passive: true });
+    mark();
+  }
+
+  /* Tracking replay ---------------------------------------------------- */
   var trkSvg = $('[data-tracking-pitch]');
   if (trkSvg) {
     var NS = 'http://www.w3.org/2000/svg';
@@ -125,7 +376,6 @@
     var log = $('[data-trk-events]');
     var logItems = log ? $$('li', log) : [];
     var btn = $('[data-trk-toggle]');
-    // Keyframes: time (s), ball position, and the players who leave the shape.
     var K = [
       { t: 0.0, b: [25, 44] }, { t: 1.1, b: [40, 36] }, { t: 2.2, b: [54, 22] }, { t: 3.5, b: [74, 8] },
       { t: 4.6, b: [87, 11] }, { t: 5.5, b: [95, 31] }, { t: 6.0, b: [105.6, 35] }, { t: 8.2, b: [105.6, 35] }
@@ -150,8 +400,7 @@
     };
     var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
     var frames = K.map(function (k, i) {
-      var f = {};
-      var bx = k.b[0], by = k.b[1];
+      var f = {}, bx = k.b[0], by = k.b[1];
       Object.keys(US).forEach(function (n) {
         var base = US[n], o = OV['u' + n] && OV['u' + n][i];
         var p = o || (n === '1' ? [base[0] + (bx - 50) * 0.08, base[1]] : [base[0] + (bx - 50) * 0.3, base[1] + (by - 34) * 0.2]);
@@ -192,7 +441,6 @@
       for (var j = 1; j <= i; j++) d += 'L' + K[j].b[0] + ' ' + K[j].b[1];
       trail.setAttribute('d', d + 'L' + bx.toFixed(2) + ' ' + by.toFixed(2));
       logItems.forEach(function (li, n) { li.classList.toggle('is-on', t >= EV[n]); });
-      gPlayers.parentNode.style.opacity = '';
     };
     if (log) log.setAttribute('data-live', '');
     if (reduceMotion) {
@@ -221,7 +469,7 @@
           syncRun();
         });
       }
-      onScreen(trkSvg, function (vis) { visible = vis; syncRun(); }, 0.3);
+      onScreen(trkSvg, function (vis) { visible = vis; syncRun(); }, { threshold: 0.3 });
     }
   }
 

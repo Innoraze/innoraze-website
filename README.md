@@ -24,7 +24,8 @@ After changing `assets/style.css`, `assets/app.js` or the icons, raise the `?v=`
 ## Assets
 
 - `assets/style.css`: all styles
-- `assets/app.js`: navigation, the hero replay, matchweek tour, tracking replay, sample report and contact form
+- `assets/hero.js`: the homepage hero, a press-and-score move drawn on a pitch in perspective
+- `assets/app.js`: navigation, the match report replay, product animations, the matchweek story, the recruit window, the tracking replay, the sample report and the contact form
 - `assets/fonts/`: Mona Sans, self-hosted under the SIL Open Font License (see `OFL.txt`)
 - `assets/logo.svg`, `assets/logo-light.svg`, `assets/favicon.svg`: logo files
 - `assets/og.png`: image shown when a link to the site is shared

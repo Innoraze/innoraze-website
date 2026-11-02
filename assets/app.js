@@ -1,287 +1,298 @@
-// Innoraze Website JavaScript
+(function () {
+  'use strict';
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+  var onScreen = function (el, cb, threshold) {
+    if (!('IntersectionObserver' in window)) { cb(true); return; }
+    new IntersectionObserver(function (entries) { cb(entries[0].isIntersecting); }, { threshold: threshold || 0 }).observe(el);
+  };
 
-// Mobile navigation toggle
-document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuButton = document.getElementById('mobile-menu-button');
-    const mobileMenu = document.getElementById('mobile-menu');
-    
-    if (mobileMenuButton && mobileMenu) {
-        mobileMenuButton.addEventListener('click', function() {
-            mobileMenu.classList.toggle('hidden');
-        });
-    }
-    
-    // Close mobile menu when clicking on a link
-    const mobileMenuLinks = mobileMenu?.querySelectorAll('a');
-    mobileMenuLinks?.forEach(link => {
-        link.addEventListener('click', function() {
-            mobileMenu.classList.add('hidden');
-        });
+  /* Header ------------------------------------------------------------ */
+  var header = $('[data-header]');
+  if (header) {
+    var onScroll = function () { header.classList.toggle('is-scrolled', window.scrollY > 8); };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  var toggle = $('[data-nav-toggle]');
+  var nav = document.getElementById('site-nav');
+  if (toggle && nav) {
+    var setOpen = function (open) {
+      toggle.setAttribute('aria-expanded', String(open));
+      nav.classList.toggle('is-open', open);
+    };
+    toggle.addEventListener('click', function () { setOpen(toggle.getAttribute('aria-expanded') !== 'true'); });
+    nav.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') { setOpen(false); toggle.focus(); }
     });
-});
+  }
 
-// Navbar scroll effect
-window.addEventListener('scroll', function() {
-    const navbar = document.getElementById('navbar');
-    if (navbar) {
-        if (window.scrollY > 100) {
-            navbar.classList.add('bg-white/98', 'shadow-lg');
-            navbar.classList.remove('bg-white/95');
-        } else {
-            navbar.classList.add('bg-white/95');
-            navbar.classList.remove('bg-white/98', 'shadow-lg');
-        }
-    }
-});
+  /* Hero: the match replays in the report ----------------------------- */
+  var hero = $('.hero-window');
+  var clock = $('[data-clock]');
+  if (hero) {
+    var played = false;
+    var play = function () {
+      if (played) return;
+      played = true;
+      hero.classList.add('is-played');
+      if (reduceMotion || !clock) return;
+      var start = null, delay = 400, length = 2600;
+      var tick = function (t) {
+        if (start === null) start = t;
+        var p = (t - start - delay) / length;
+        if (p < 0) clock.textContent = '0\u2019';
+        else if (p < 1) clock.textContent = Math.floor(p * 90) + '\u2019';
+        else { clock.textContent = 'Full time'; return; }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
+      onScreen(hero, function (vis) { if (vis) play(); }, 0.2);
+    });
+  }
 
-// Scores widget functionality
-async function loadScoresWidget() {
-    const scoresContainer = document.getElementById('scores-widget');
-    if (!scoresContainer) return;
-    
-    try {
-        // Show loading state
-        scoresContainer.innerHTML = `
-            <div class="col-span-full text-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue mx-auto"></div>
-                <p class="mt-2 text-gray-600">Loading live scores...</p>
-            </div>
-        `;
-        
-        // Fetch scores data
-        const response = await fetch('data/scores.json');
-        if (!response.ok) {
-            throw new Error('Failed to fetch scores');
-        }
-        
-        const data = await response.json();
-        renderScores(data.matches);
-        
-    } catch (error) {
-        console.error('Error loading scores:', error);
-        scoresContainer.innerHTML = `
-            <div class="col-span-full text-center py-8">
-                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Unable to load scores</h3>
-                <p class="text-gray-600 mb-4">There was an error loading the live scores. Please try again later.</p>
-                <button onclick="loadScoresWidget()" class="bg-brand-blue hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                    Retry
-                </button>
-            </div>
-        `;
-    }
-}
+  /* Tabs (matchweek and sample report) -------------------------------- */
+  $$('[data-tabs]').forEach(function (root) {
+    var tabs = $$('[role="tab"]', root);
+    var list = $('[role="tablist"]', root);
+    var select = function (tab, focus) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      if (focus) tab.focus({ preventScroll: true });
+      if (list && list.scrollWidth > list.clientWidth) {
+        list.scrollTo({ left: Math.max(0, tab.offsetLeft - 20), behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+    };
+    root._select = select;
+    root._tabs = tabs;
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () { select(tab, false); root.dispatchEvent(new CustomEvent('tabs:user')); });
+      tab.addEventListener('keydown', function (e) {
+        var next = null;
+        if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+        if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (e.key === 'Home') next = tabs[0];
+        if (e.key === 'End') next = tabs[tabs.length - 1];
+        if (next) { e.preventDefault(); select(next, true); root.dispatchEvent(new CustomEvent('tabs:user')); }
+      });
+    });
+  });
 
-function renderScores(matches) {
-    const scoresContainer = document.getElementById('scores-widget');
-    if (!scoresContainer) return;
-    
-    if (!matches || matches.length === 0) {
-        scoresContainer.innerHTML = `
-            <div class="col-span-full text-center py-8">
-                <p class="text-gray-600">No matches available at the moment.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const scoresHTML = matches.map(match => `
-        <div class="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-            <div class="text-center mb-4">
-                <div class="text-sm text-gray-600 mb-2">${match.league}</div>
-                <div class="text-lg font-semibold text-gray-900">${match.home} vs ${match.away}</div>
-            </div>
-            <div class="text-center">
-                <div class="text-3xl font-bold text-brand-blue mb-2">${match.score}</div>
-                <div class="text-sm text-gray-600">
-                    <span class="px-3 py-1 rounded-full ${getStatusColor(match.status)}">${match.status}</span>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    scoresContainer.innerHTML = scoresHTML;
-}
+  /* Matchweek: plays through the week until someone takes over ------- */
+  var week = $('[data-week]');
+  if (week && week._select && !reduceMotion) {
+    var ctrl = $('[data-week-toggle]', week);
+    var userPaused = false, inView = false, hovering = false;
+    var sync = function () { week.classList.toggle('is-paused', userPaused || !inView || hovering); };
+    var setCtrl = function () {
+      $('[data-label]', ctrl).textContent = userPaused ? 'Play tour' : 'Pause tour';
+      ctrl.firstElementChild.className = userPaused ? 'icon-play' : 'icon-pause';
+      ctrl.setAttribute('aria-label', userPaused ? 'Play the matchweek tour' : 'Pause the matchweek tour');
+    };
+    ctrl.hidden = false;
+    setCtrl();
+    week.classList.add('is-auto', 'is-paused');
+    week.addEventListener('animationend', function (e) {
+      if (e.animationName !== 'week-progress' || !week.classList.contains('is-auto')) return;
+      var tabs = week._tabs;
+      var i = tabs.indexOf(e.target);
+      week._select(tabs[(i + 1) % tabs.length], false);
+    });
+    week.addEventListener('tabs:user', function () { week.classList.remove('is-auto', 'is-paused'); ctrl.hidden = true; });
+    ctrl.addEventListener('click', function () { userPaused = !userPaused; setCtrl(); sync(); });
+    var panelArea = $$('.week__panel', week);
+    panelArea.forEach(function (p) {
+      p.addEventListener('mouseenter', function () { hovering = true; sync(); });
+      p.addEventListener('mouseleave', function () { hovering = false; sync(); });
+    });
+    onScreen(week, function (vis) { inView = vis; sync(); }, 0.35);
+  }
 
-function getStatusColor(status) {
-    if (status === 'FT') {
-        return 'bg-gray-100 text-gray-800';
-    } else if (status.includes("'")) {
-        return 'bg-brand-blue text-white';
-    } else if (status === 'HT') {
-        return 'bg-orange-100 text-orange-800';
+  /* Tracking replay -------------------------------------------------- */
+  var trkSvg = $('[data-tracking-pitch]');
+  if (trkSvg) {
+    var NS = 'http://www.w3.org/2000/svg';
+    var gPlayers = $('.trk-players', trkSvg), ball = $('.trk-ball', trkSvg), trail = $('.trk-trail', trkSvg);
+    var log = $('[data-trk-events]');
+    var logItems = log ? $$('li', log) : [];
+    var btn = $('[data-trk-toggle]');
+    // Keyframes: time (s), ball position, and the players who leave the shape.
+    var K = [
+      { t: 0.0, b: [25, 44] }, { t: 1.1, b: [40, 36] }, { t: 2.2, b: [54, 22] }, { t: 3.5, b: [74, 8] },
+      { t: 4.6, b: [87, 11] }, { t: 5.5, b: [95, 31] }, { t: 6.0, b: [105.6, 35] }, { t: 8.2, b: [105.6, 35] }
+    ];
+    var EV = [1.1, 2.2, 3.5, 4.6, 5.5, 6.0, 6.05];
+    var LOOP = 9.2;
+    var US = { 1: [6, 34], 5: [25, 24], 4: [25, 44], 3: [38, 8], 2: [38, 60], 6: [40, 34], 10: [52, 22], 8: [52, 46], 11: [68, 10], 7: [68, 58], 9: [74, 34] };
+    var OPP = { 1: [99, 34], 2: [80, 15], 3: [82, 28], 4: [82, 40], 5: [80, 53], 6: [66, 13], 7: [67, 27], 8: [67, 41], 9: [66, 55], 10: [52, 28], 11: [53, 42] };
+    var HOLD = { 0: 4, 1: 6, 2: 10, 3: 3, 4: 3, 5: 9 };
+    var OV = {
+      u3: [[40, 8], [50, 8], [63, 7], null, null, [86, 12], [86, 14], [86, 14]],
+      u9: [[72, 34], [74, 33], [77, 32], [82, 30], [88, 31], null, [97, 33], [97, 33]],
+      u11: [null, null, [72, 14], [78, 18], [84, 22], [90, 25], [92, 26], [92, 26]],
+      u7: [null, null, null, [80, 52], [88, 48], [94, 42], [96, 40], [96, 40]],
+      u10: [null, null, null, [66, 22], [76, 24], [82, 30], [83, 31], [83, 31]],
+      u8: [null, null, null, [66, 44], [74, 42], [80, 40], [80, 40], [80, 40]],
+      o2: [null, null, null, [80, 10], [86, 12], [89, 14], [90, 15], [90, 15]],
+      o3: [null, null, null, null, [90, 27], [96, 30], [97, 32], [97, 32]],
+      o4: [null, null, null, null, [90, 37], [95, 37], [96, 38], [96, 38]],
+      o1: [null, null, null, null, null, [101, 33], [103.6, 34.6], [103.6, 34.6]],
+      o6: [null, null, null, [74, 12], [80, 14], [82, 17], [82, 17], [82, 17]]
+    };
+    var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+    var frames = K.map(function (k, i) {
+      var f = {};
+      var bx = k.b[0], by = k.b[1];
+      Object.keys(US).forEach(function (n) {
+        var base = US[n], o = OV['u' + n] && OV['u' + n][i];
+        var p = o || (n === '1' ? [base[0] + (bx - 50) * 0.08, base[1]] : [base[0] + (bx - 50) * 0.3, base[1] + (by - 34) * 0.2]);
+        if (HOLD[i] === +n) p = [bx - 0.9, by];
+        f['u' + n] = [clamp(p[0], 1, 104), clamp(p[1], 1, 67)];
+      });
+      Object.keys(OPP).forEach(function (n) {
+        var base = OPP[n], o = OV['o' + n] && OV['o' + n][i];
+        var p = o || (n === '1' ? [base[0], base[1] + (by - 34) * 0.1] : [base[0] + (bx - 50) * 0.32, base[1] + (by - 34) * 0.32]);
+        f['o' + n] = [clamp(p[0], 1, 104.5), clamp(p[1], 1, 67)];
+      });
+      return f;
+    });
+    var dots = {};
+    Object.keys(frames[0]).forEach(function (id) {
+      var c = document.createElementNS(NS, 'circle');
+      c.setAttribute('r', '1.35');
+      c.setAttribute('class', id.charAt(0) === 'u' ? 'trk-us' : 'trk-opp');
+      gPlayers.appendChild(c);
+      dots[id] = c;
+    });
+    var ease = function (x) { return x * x * (3 - 2 * x); };
+    var render = function (t) {
+      var i = 0;
+      while (i < K.length - 2 && t > K[i + 1].t) i++;
+      var a = K[i], b = K[i + 1];
+      var p = clamp((t - a.t) / (b.t - a.t), 0, 1), e = ease(p);
+      Object.keys(dots).forEach(function (id) {
+        var A = frames[i][id], B = frames[i + 1][id];
+        dots[id].setAttribute('cx', (A[0] + (B[0] - A[0]) * e).toFixed(2));
+        dots[id].setAttribute('cy', (A[1] + (B[1] - A[1]) * e).toFixed(2));
+      });
+      var bp = i === 5 ? p * p : p;
+      var bx = a.b[0] + (b.b[0] - a.b[0]) * bp, by = a.b[1] + (b.b[1] - a.b[1]) * bp;
+      ball.setAttribute('cx', bx.toFixed(2));
+      ball.setAttribute('cy', by.toFixed(2));
+      var d = 'M' + K[0].b[0] + ' ' + K[0].b[1];
+      for (var j = 1; j <= i; j++) d += 'L' + K[j].b[0] + ' ' + K[j].b[1];
+      trail.setAttribute('d', d + 'L' + bx.toFixed(2) + ' ' + by.toFixed(2));
+      logItems.forEach(function (li, n) { li.classList.toggle('is-on', t >= EV[n]); });
+      gPlayers.parentNode.style.opacity = '';
+    };
+    if (log) log.setAttribute('data-live', '');
+    if (reduceMotion) {
+      render(K[K.length - 1].t);
     } else {
-        return 'bg-gray-100 text-gray-800';
+      var running = true, visible = false, t0 = null, tNow = 0, raf = null;
+      var loop = function (ts) {
+        if (t0 === null) t0 = ts - tNow * 1000;
+        tNow = (ts - t0) / 1000;
+        if (tNow > LOOP) { t0 = ts; tNow = 0; }
+        render(Math.min(tNow, K[K.length - 1].t));
+        trkSvg.style.opacity = tNow > LOOP - 0.5 ? String(Math.max(0.25, (LOOP - tNow) * 2)) : '';
+        raf = requestAnimationFrame(loop);
+      };
+      var syncRun = function () {
+        if (running && visible && raf === null) { t0 = null; raf = requestAnimationFrame(loop); }
+        if ((!running || !visible) && raf !== null) { cancelAnimationFrame(raf); raf = null; }
+      };
+      render(0);
+      if (btn) {
+        btn.hidden = false;
+        btn.addEventListener('click', function () {
+          running = !running;
+          $('[data-label]', btn).textContent = running ? 'Pause' : 'Play';
+          btn.firstElementChild.className = running ? 'icon-pause' : 'icon-play';
+          syncRun();
+        });
+      }
+      onScreen(trkSvg, function (vis) { visible = vis; syncRun(); }, 0.3);
     }
-}
+  }
 
-// Smooth scrolling for anchor links
-document.addEventListener('click', function(e) {
-    if (e.target.matches('a[href^="#"]')) {
+  /* Sample report: shots map <-> table -------------------------------- */
+  $$('[data-shots]').forEach(function (root) {
+    var hot = function (el, on) {
+      if (!el) return;
+      $$('[data-shot="' + el.getAttribute('data-shot') + '"]', root).forEach(function (n) { n.classList.toggle('is-hot', on); });
+    };
+    ['mouseover', 'focusin'].forEach(function (ev) { root.addEventListener(ev, function (e) { hot(e.target.closest('[data-shot]'), true); }); });
+    ['mouseout', 'focusout'].forEach(function (ev) { root.addEventListener(ev, function (e) { hot(e.target.closest('[data-shot]'), false); }); });
+  });
+
+  /* Sortable tables -------------------------------------------------- */
+  $$('table[data-sortable]').forEach(function (table) {
+    var ths = $$('th', table);
+    $$('th button', table).forEach(function (button) {
+      button.addEventListener('click', function () {
+        var th = button.closest('th');
+        var idx = ths.indexOf(th);
+        var dir = th.getAttribute('aria-sort') === 'descending' ? 'ascending' : 'descending';
+        ths.forEach(function (h) { h.removeAttribute('aria-sort'); });
+        th.setAttribute('aria-sort', dir);
+        var body = table.tBodies[0];
+        Array.prototype.slice.call(body.rows).sort(function (a, b) {
+          var x = parseFloat(a.cells[idx].textContent), y = parseFloat(b.cells[idx].textContent);
+          return dir === 'ascending' ? x - y : y - x;
+        }).forEach(function (r) { body.appendChild(r); });
+      });
+    });
+  });
+
+  /* Contact form ------------------------------------------------------ */
+  var form = $('[data-form]');
+  if (form) {
+    var params = new URLSearchParams(window.location.search);
+    var topic = params.get('topic');
+    if (topic) { var r = $('[data-topic="' + topic + '"]', form); if (r) r.checked = true; }
+    var hint = $('[data-hint-report]', form);
+    var syncHint = function () { if (hint) hint.hidden = !$('[data-topic="report"]', form).checked; };
+    form.addEventListener('change', syncHint);
+    syncHint();
+    var status = $('[data-status]', form), submit = $('[data-submit]', form);
+    var done = function (email) {
+      var box = document.createElement('div');
+      box.className = 'form-done';
+      box.setAttribute('tabindex', '-1');
+      box.innerHTML = '<h2 class="h3">Request sent</h2><p></p>';
+      box.querySelector('p').textContent = email
+        ? 'Thanks. We’ll reply to ' + email + ' within one working day.'
+        : 'Thanks. We’ll reply within one working day.';
+      form.parentNode.replaceChild(box, form);
+      box.focus();
+    };
+    if (params.get('sent')) { done(''); }
+    else {
+      form.addEventListener('submit', function (e) {
+        if (!window.fetch || !window.FormData) return;
         e.preventDefault();
-        const targetId = e.target.getAttribute('href').substring(1);
-        const targetElement = document.getElementById(targetId);
-        
-        if (targetElement) {
-            const offsetTop = targetElement.offsetTop - 80; // Account for fixed navbar
-            window.scrollTo({
-                top: offsetTop,
-                behavior: 'smooth'
-            });
-        }
+        var email = form.elements.email.value;
+        status.classList.remove('is-error');
+        status.textContent = 'Sending…';
+        submit.disabled = true;
+        fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } })
+          .then(function (res) { if (!res.ok) throw new Error(res.status); done(email); })
+          .catch(function () {
+            status.textContent = 'Your request didn’t send. Check your connection and try again, or email contact@innoraze.com.';
+            status.classList.add('is-error');
+            submit.disabled = false;
+          });
+      });
     }
-});
-
-// Form validation and submission
-function setupFormValidation() {
-    const forms = document.querySelectorAll('form');
-    
-    forms.forEach(form => {
-        // Skip contact form completely - let it submit to Formspree without any validation
-        if (form.id === 'contact-form') {
-            return;
-        }
-        
-        form.addEventListener('submit', function(e) {
-            const requiredFields = form.querySelectorAll('[required]');
-            let isValid = true;
-            
-            // Clear previous error states
-            requiredFields.forEach(field => {
-                field.classList.remove('form-error', 'form-success');
-            });
-            
-            // Validate required fields
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    field.classList.add('form-error');
-                    isValid = false;
-                } else {
-                    field.classList.add('form-success');
-                }
-            });
-            
-            // Validate email format
-            const emailField = form.querySelector('input[type="email"]');
-            if (emailField && emailField.value) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(emailField.value)) {
-                    emailField.classList.remove('form-success');
-                    emailField.classList.add('form-error');
-                    isValid = false;
-                }
-            }
-            
-            if (!isValid) {
-                e.preventDefault();
-                showNotification('Please fill in all required fields correctly.', 'error');
-            }
-            // If valid, let the form submit naturally (no preventDefault)
-        });
-    });
-}
-
-// Notification system
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-        type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
-        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
-        'bg-blue-100 text-blue-800 border border-blue-200'
-    }`;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
-    }, 5000);
-}
-
-// Intersection Observer for animations
-function setupScrollAnimations() {
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('animate-fade-in-up');
-            }
-        });
-    }, observerOptions);
-    
-    // Observe elements with animation class
-    const animatedElements = document.querySelectorAll('.animate-on-scroll');
-    animatedElements.forEach(el => observer.observe(el));
-}
-
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Load scores widget if on home page
-    if (document.getElementById('scores-widget')) {
-        loadScoresWidget();
-    }
-    
-    // Setup form validation
-    setupFormValidation();
-    
-    // Setup scroll animations
-    setupScrollAnimations();
-    
-    // Add loading states to buttons (skip contact form)
-    const buttons = document.querySelectorAll('button[type="submit"]:not(#contact-form button)');
-    buttons.forEach(button => {
-        button.addEventListener('click', function() {
-            if (this.form && this.form.checkValidity()) {
-                this.textContent = 'Sending...';
-                this.disabled = true;
-            }
-        });
-    });
-});
-
-// Utility functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Performance optimization: Lazy load images
-function setupLazyLoading() {
-    const images = document.querySelectorAll('img[data-src]');
-    
-    const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('loading-skeleton');
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-    
-    images.forEach(img => imageObserver.observe(img));
-}
-
-// Initialize lazy loading
-document.addEventListener('DOMContentLoaded', setupLazyLoading);
+  }
+})();

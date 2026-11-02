@@ -1,22 +1,4 @@
 User-agent: *
 Allow: /
 
-# Sitemap
 Sitemap: https://innoraze.com/sitemap.xml
-
-# Disallow admin areas (if any)
-Disallow: /admin/
-Disallow: /private/
-
-# Allow all pages
-Allow: /
-Allow: /solutions.html
-Allow: /about.html
-Allow: /contact.html
-Allow: /privacy.html
-Allow: /terms.html
-Allow: /404.html
-
-# Allow assets
-Allow: /assets/
-Allow: /data/

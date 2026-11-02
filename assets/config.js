@@ -15,5 +15,5 @@ window.INNORAZE = {
   // Visitor numbers (Cloudflare Web Analytics, no cookies). In Cloudflare: Web Analytics > Add a site,
   // then copy the token from the snippet it shows you.
   // Looks like: '0123456789abcdef0123456789abcdef'
-  cloudflareToken: ''
+  cloudflareToken: '74c363733c154900b964cf5559ae9b07'
 };

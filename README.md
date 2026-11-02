@@ -6,7 +6,7 @@ It is a static site served by GitHub Pages from the `main` branch. There is no b
 
 Links leave off `.html` (for example `/platform`), which GitHub Pages serves from `platform.html`. To click through the site on your own computer, run `npx serve` in this folder (it handles links without `.html` the same way) and open the address it prints.
 
-After changing `assets/style.css`, `assets/app.js` or the icons, raise the `?v=` number where they are linked in each page's `<head>` so browsers fetch the new version.
+After changing `assets/style.css`, `assets/app.js`, `assets/config.js` or the icons, raise the `?v=` number where they are linked in each page's `<head>` so browsers fetch the new version.
 
 ## Pages
 

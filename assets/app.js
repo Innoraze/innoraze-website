@@ -595,28 +595,116 @@
     if (store.get('iz-chat') === '1') bootCrisp().catch(function () {});
   }
 
-  // Demo booking: "Book a demo" opens the calendar when one is set up.
+  // Demo booking: "Book a demo" opens Arthur's calendar inside our own frame.
+  // BOOKING-START
   if (cfg.calendlyUrl) {
     $$('[data-book-block]').forEach(function (b) { b.hidden = false; });
-    var calReady = null;
-    var bootCal = function () {
-      if (calReady) return calReady;
-      var css = document.createElement('link');
-      css.rel = 'stylesheet'; css.href = 'https://assets.calendly.com/assets/external/widget.css';
-      document.head.appendChild(css);
-      calReady = loadScript('https://assets.calendly.com/assets/external/widget.js');
-      return calReady;
+    var bk = null;
+    var bkSub = '30 minutes with Arthur Ekwaba<span class="booking__role">, our founder</span>';
+    var bkSrc = function () {
+      return cfg.calendlyUrl + (cfg.calendlyUrl.indexOf('?') > -1 ? '&' : '?') +
+        'embed_domain=' + encodeURIComponent(location.hostname || 'innoraze.com') +
+        '&embed_type=Inline&hide_event_type_details=1&hide_gdpr_banner=1&primary_color=ff6a1a';
     };
-    var calUrl = cfg.calendlyUrl + (cfg.calendlyUrl.indexOf('?') > -1 ? '&' : '?') + 'hide_gdpr_banner=1&primary_color=ff6a1a';
+    var bkBuild = function () {
+      var d = document.createElement('dialog');
+      d.className = 'booking';
+      d.setAttribute('aria-labelledby', 'booking-title');
+      d.innerHTML =
+        '<div class="booking__bar">' +
+          '<svg class="booking__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#123b2c"/><path d="M7.5 24.5V11.5a13 13 0 0 1 13 13z" fill="#ff6a1a"/></svg>' +
+          '<div class="booking__head"><h2 class="booking__title" id="booking-title">Book a demo</h2>' +
+          '<p class="booking__sub">' + bkSub + '</p></div>' +
+          '<button class="booking__close" type="button" aria-label="Close">' +
+            '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" fill="none"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="booking__body">' +
+          '<div class="booking__wait"><span class="booking__dots" aria-hidden="true"><i></i><i></i><i></i></span>' +
+          '<p class="booking__slow" hidden>The calendar is taking a while. You can also <a href="/contact?topic=demo" data-no-book>send us a request</a>.</p></div>' +
+        '</div>';
+      document.body.appendChild(d);
+      var b = {
+        d: d, body: $('.booking__body', d), slow: $('.booking__slow', d),
+        title: $('.booking__title', d), sub: $('.booking__sub', d),
+        frame: null, ready: false, booked: false, timer: 0
+      };
+      var downOutside = false;
+      d.addEventListener('pointerdown', function (e) { downOutside = e.target === d; });
+      d.addEventListener('click', function (e) { if (e.target === d && downOutside) bkClose(); });
+      d.addEventListener('cancel', function (e) { e.preventDefault(); bkClose(); });
+      d.addEventListener('close', function () {
+        d.classList.remove('is-closing');
+        document.documentElement.classList.remove('is-modal');
+        if (b.booked) bkReset();
+      });
+      $('.booking__close', d).addEventListener('click', bkClose);
+      return b;
+    };
+    var bkShow = function () {
+      if (!bk || bk.ready) return;
+      bk.ready = true; clearTimeout(bk.timer);
+      bk.body.classList.add('is-ready');
+    };
+    var bkLoad = function () {
+      var f = document.createElement('iframe');
+      f.className = 'booking__frame';
+      f.title = 'Calendar for booking a demo';
+      f.src = bkSrc();
+      // Calendly tells us when its page is drawn; this is only a backstop.
+      f.addEventListener('load', function () { setTimeout(bkShow, 6000); });
+      bk.timer = setTimeout(function () { if (!bk.ready) bk.slow.hidden = false; }, 12000);
+      bk.body.appendChild(f);
+      bk.frame = f;
+    };
+    var bkReset = function () {
+      if (bk.frame) bk.frame.remove();
+      bk.frame = null; bk.ready = false; bk.booked = false;
+      bk.body.classList.remove('is-ready');
+      bk.d.style.removeProperty('--bk-h');
+      bk.slow.hidden = true;
+      bk.title.textContent = 'Book a demo';
+      bk.sub.innerHTML = bkSub;
+    };
+    var bkOpen = function () {
+      if (!bk) bk = bkBuild();
+      if (bk.d.open) return;
+      if (!bk.frame) bkLoad();
+      document.documentElement.classList.add('is-modal');
+      bk.d.showModal();
+    };
+    var bkClose = function () {
+      var d = bk && bk.d;
+      if (!d || !d.open || d.classList.contains('is-closing')) return;
+      if (reduceMotion) { d.close(); return; }
+      d.classList.add('is-closing');
+      setTimeout(function () { d.close(); }, 200);
+    };
+    window.addEventListener('message', function (e) {
+      if (!bk || e.origin !== 'https://calendly.com' || !e.data || typeof e.data.event !== 'string') return;
+      var ev = e.data.event;
+      if (ev === 'calendly.page_height') {
+        // Fit the frame to each step of the calendar, so it never hangs half empty.
+        var h = parseInt(e.data.payload && e.data.payload.height, 10);
+        if (h > 300) { bk.d.style.setProperty('--bk-h', h + 'px'); bkShow(); }
+        return;
+      }
+      if (ev === 'calendly.event_scheduled') {
+        bk.booked = true;
+        bk.title.textContent = 'You’re booked';
+        bk.sub.textContent = 'The invite is on its way to your inbox.';
+      }
+      bkShow();
+    });
     document.addEventListener('click', function (e) {
       var trigger = e.target.closest('[data-book], a[href*="topic=demo"]');
-      if (!trigger || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (!trigger || trigger.hasAttribute('data-no-book') || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (typeof HTMLDialogElement !== 'function') return;
       e.preventDefault();
-      var fallback = trigger.getAttribute('href');
-      bootCal().then(function () { window.Calendly.initPopupWidget({ url: calUrl }); })
-        .catch(function () { window.location.href = fallback || '/contact?topic=demo'; });
+      bkOpen();
     });
   }
+  // BOOKING-END
 
   /* Expected goals explorer (methodology page) ------------------------- */
   var xgSvg = $('[data-xg]');

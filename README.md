@@ -4,6 +4,10 @@ The website for Innoraze, football analytics and dashboards for clubs.
 
 It is a static site served by GitHub Pages from the `main` branch. There is no build step: edit the HTML, CSS or JavaScript and push.
 
+Links leave off `.html` (for example `/platform`), which GitHub Pages serves from `platform.html`. To click through the site on your own computer, run `npx serve` in this folder (it handles links without `.html` the same way) and open the address it prints.
+
+After changing `assets/style.css`, `assets/app.js` or the icons, raise the `?v=` number where they are linked in each page's `<head>` so browsers fetch the new version.
+
 ## Pages
 
 | File | Page |

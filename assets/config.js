@@ -10,7 +10,7 @@ window.INNORAZE = {
 
   // Demo booking (calendly.com). The link to your 30-minute demo event.
   // Looks like: 'https://calendly.com/innoraze/demo'
-  calendlyUrl: '',
+  calendlyUrl: 'https://calendly.com/arthurekwaba007/30min',
 
   // Visitor numbers (Cloudflare Web Analytics, no cookies). In Cloudflare: Web Analytics > Add a site,
   // then copy the token from the snippet it shows you.

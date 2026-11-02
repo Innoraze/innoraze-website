@@ -16,19 +16,22 @@ After changing `assets/style.css`, `assets/app.js` or the icons, raise the `?v=`
 | `platform.html` | Platform and plans |
 | `sample-report.html` | Interactive sample match report |
 | `about.html` | About |
-| `contact.html` | Demo and free report requests |
+| `contact.html` | Demo, free report and pilot requests |
+| `methodology.html` | How our numbers work, with the expected goals explorer |
 | `privacy.html`, `terms.html` | Legal |
 | `404.html` | Not found |
 | `solutions.html` | Redirects to `platform.html` for old links |
 
 ## Assets
 
+- `assets/config.js`: switches for live chat (Crisp), demo booking (Calendly) and visitor numbers (Cloudflare Web Analytics). Paste an ID to turn one on.
 - `assets/style.css`: all styles
 - `assets/hero.js`: the homepage hero, a press-and-score move drawn on a pitch in perspective
 - `assets/app.js`: navigation, the match report replay, product animations, the matchweek story, the recruit window, the tracking replay, the sample report and the contact form
 - `assets/fonts/`: Mona Sans, self-hosted under the SIL Open Font License (see `OFL.txt`)
 - `assets/logo.svg`, `assets/logo-light.svg`, `assets/favicon.svg`: logo files
 - `assets/og.png`: image shown when a link to the site is shared
+- `assets/xg-field.png`: the expected goals heat map on the methodology page
 
 ## Contact form
 

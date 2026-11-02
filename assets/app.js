@@ -543,4 +543,128 @@
       });
     }
   }
+
+  /* Settings-driven features: analytics, chat, booking ------------------ */
+  var cfg = window.INNORAZE || {};
+  var loadScript = function (src, attrs) {
+    return new Promise(function (resolve, reject) {
+      var sc = document.createElement('script');
+      sc.src = src; sc.async = true;
+      if (attrs) Object.keys(attrs).forEach(function (k) { sc.setAttribute(k, attrs[k]); });
+      sc.onload = resolve; sc.onerror = reject;
+      document.head.appendChild(sc);
+    });
+  };
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  // Visitor numbers: Cloudflare Web Analytics sets no cookies.
+  if (cfg.cloudflareToken) {
+    loadScript('https://static.cloudflareinsights.com/beacon.min.js', { 'data-cf-beacon': JSON.stringify({ token: cfg.cloudflareToken }) }).catch(function () {});
+  }
+
+  // Live chat: our own button; Crisp only loads once someone asks to chat.
+  var chatBtn = $('[data-chat]');
+  if (chatBtn && cfg.crispWebsiteId) {
+    var badge = $('.chat-launch__badge', chatBtn);
+    var crispReady = null;
+    var bootCrisp = function () {
+      if (crispReady) return crispReady;
+      window.$crisp = window.$crisp || [];
+      window.CRISP_WEBSITE_ID = cfg.crispWebsiteId;
+      window.$crisp.push(['safe', true]);
+      window.$crisp.push(['do', 'chat:hide']);
+      window.$crisp.push(['on', 'chat:opened', function () { chatBtn.hidden = true; chatBtn.classList.remove('is-loading'); badge.hidden = true; }]);
+      window.$crisp.push(['on', 'chat:closed', function () { window.$crisp.push(['do', 'chat:hide']); chatBtn.hidden = false; }]);
+      window.$crisp.push(['on', 'message:received', function () { if (!chatBtn.hidden) badge.hidden = false; }]);
+      crispReady = loadScript('https://client.crisp.chat/l.js');
+      store.set('iz-chat', '1');
+      return crispReady;
+    };
+    chatBtn.hidden = false;
+    chatBtn.addEventListener('click', function () {
+      chatBtn.classList.add('is-loading');
+      bootCrisp().then(function () {
+        window.$crisp.push(['do', 'chat:show']);
+        window.$crisp.push(['do', 'chat:open']);
+      }).catch(function () { window.location.href = '/contact'; });
+    });
+    // Someone who has chatted before keeps their conversation, so replies reach them.
+    if (store.get('iz-chat') === '1') bootCrisp().catch(function () {});
+  }
+
+  // Demo booking: "Book a demo" opens the calendar when one is set up.
+  if (cfg.calendlyUrl) {
+    $$('[data-book-block]').forEach(function (b) { b.hidden = false; });
+    var calReady = null;
+    var bootCal = function () {
+      if (calReady) return calReady;
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://assets.calendly.com/assets/external/widget.css';
+      document.head.appendChild(css);
+      calReady = loadScript('https://assets.calendly.com/assets/external/widget.js');
+      return calReady;
+    };
+    var calUrl = cfg.calendlyUrl + (cfg.calendlyUrl.indexOf('?') > -1 ? '&' : '?') + 'hide_gdpr_banner=1&primary_color=ff6a1a';
+    document.addEventListener('click', function (e) {
+      var trigger = e.target.closest('[data-book], a[href*="topic=demo"]');
+      if (!trigger || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      var fallback = trigger.getAttribute('href');
+      bootCal().then(function () { window.Calendly.initPopupWidget({ url: calUrl }); })
+        .catch(function () { window.location.href = fallback || '/contact?topic=demo'; });
+    });
+  }
+
+  /* Expected goals explorer (methodology page) ------------------------- */
+  var xgSvg = $('[data-xg]');
+  if (xgSvg) {
+    var marker = $('.xg-marker', xgSvg), cone = $('.xg-cone', xgSvg);
+    var outVal = $('[data-xg-value]'), outDetail = $('[data-xg-detail]'), outPlain = $('[data-xg-plain]');
+    var xgAt = function (u, v) {
+      var d = Math.hypot(u - 34, v);
+      var a = Math.abs(Math.atan2(-v, 37.66 - u) - Math.atan2(-v, 30.34 - u));
+      if (a > Math.PI) a = 2 * Math.PI - a;
+      var z = 0.248 + 1.6 * Math.min(a, 0.9) - 0.1931 * d;
+      return { xg: Math.min(0.95, Math.max(0.01, 1 / (1 + Math.exp(-z)))), d: d, a: a };
+    };
+    var plain = function (x) {
+      if (x >= 0.5) return 'Scored more often than not.';
+      if (x >= 0.095) return 'Scored about ' + Math.round(x * 10) + ' time' + (Math.round(x * 10) === 1 ? '' : 's') + ' in 10.';
+      if (x >= 0.015) return 'Scored about ' + Math.max(1, Math.round(x * 100)) + ' times in 100.';
+      return 'Scored about once in 100 tries, or less.';
+    };
+    var place = function (u, v) {
+      u = Math.max(0, Math.min(68, u)); v = Math.max(0.3, Math.min(39, v));
+      var r = xgAt(u, v);
+      marker.setAttribute('cx', u.toFixed(2)); marker.setAttribute('cy', v.toFixed(2));
+      marker.setAttribute('r', (1 + Math.sqrt(r.xg) * 2.6).toFixed(2));
+      cone.setAttribute('d', 'M' + u.toFixed(2) + ' ' + v.toFixed(2) + 'L30.34 0L37.66 0Z');
+      outVal.textContent = r.xg.toFixed(2);
+      outDetail.textContent = r.d.toFixed(1) + ' m from goal, ' + Math.round(r.a * 180 / Math.PI) + '° of the goal in view';
+      outPlain.textContent = plain(r.xg);
+    };
+    var toPitch = function (e) {
+      var pt = xgSvg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      var q = pt.matrixTransform(xgSvg.getScreenCTM().inverse());
+      return [q.x, q.y];
+    };
+    var dragging = false;
+    xgSvg.addEventListener('pointerdown', function (e) { dragging = true; var q = toPitch(e); place(q[0], q[1]); try { xgSvg.setPointerCapture(e.pointerId); } catch (er) {} });
+    xgSvg.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'mouse' || dragging) { var q = toPitch(e); place(q[0], q[1]); }
+    });
+    xgSvg.addEventListener('pointerup', function () { dragging = false; });
+    $$('[data-xg-spot]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var c = b.getAttribute('data-xg-spot').split(',').map(Number);
+        $$('[data-xg-spot]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+        place(c[0], c[1]);
+      });
+    });
+    place(34, 11);
+  }
 })();

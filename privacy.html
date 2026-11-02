@@ -20,9 +20,10 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=2">
   <link rel="manifest" href="manifest.webmanifest?v=2">
   <link rel="preload" href="assets/fonts/mona-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/style.css?v=3">
+  <link rel="stylesheet" href="assets/style.css?v=4">
   <script>document.documentElement.classList.add('js');try{if(!sessionStorage.getItem('iz'))document.documentElement.classList.add('first-visit');sessionStorage.setItem('iz','1')}catch(e){}</script>
-  <script src="assets/app.js?v=3" defer></script>
+  <script src="assets/config.js?v=2" defer></script>
+  <script src="assets/app.js?v=4" defer></script>
   <script type="speculationrules">{"prefetch":[{"source":"document","where":{"href_matches":"/*"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -58,14 +59,22 @@
           <h2>What we collect</h2>
           <p><strong>When you use our contact form,</strong> we receive your name, work email, club or organisation, role and anything you write in the message.</p>
           <p><strong>When you email us,</strong> we receive your email address and whatever is in your message.</p>
-          <p><strong>When you visit the site,</strong> our hosting provider processes technical data such as your IP address so it can deliver the pages and keep the service secure. We don’t use cookies, analytics or advertising trackers, and our fonts are served from this site rather than a third party.</p>
+          <p><strong>When you chat with us,</strong> we receive your messages and anything you choose to share, such as your name or email. The chat only loads when you open it.</p>
+          <p><strong>When you book a demo in our calendar,</strong> we receive the details you enter in the booking form. The calendar only loads when you choose to book.</p>
+          <p><strong>When you visit the site,</strong> our hosting provider processes technical data such as your IP address so it can deliver the pages and keep the service secure. We count visits with Cloudflare Web Analytics, which doesn’t use cookies or identify you. We don’t use advertising trackers, and our fonts are served from this site rather than a third party.</p>
+
+          <h2>Cookies</h2>
+          <p>Browsing the site sets no cookies. If you open the chat or the booking calendar, those services set their own cookies so they can work, for example to keep your conversation open as you move between pages. Because they only load when you ask for them, we don’t show a cookie banner.</p>
 
           <h2>Why we use it</h2>
-          <p>We use what you send us to reply, arrange a demo and, if you ask for one, prepare a match report. The legal basis is taking steps at your request before a possible contract, and our legitimate interest in answering enquiries. We don’t add you to a mailing list or send marketing unless you ask us to.</p>
+          <p>We use what you send us to reply, arrange a demo and, if you ask for one, prepare a match report or a pilot. The legal basis is taking steps at your request before a possible contract, and our legitimate interest in answering enquiries. We don’t add you to a mailing list or send marketing unless you ask us to.</p>
 
           <h2>Who else processes it</h2>
           <ul>
             <li><strong>Formspree</strong> receives contact form submissions and forwards them to us.</li>
+            <li><strong>Crisp</strong> runs our chat and stores chat conversations.</li>
+            <li><strong>Calendly</strong> runs our booking calendar and stores bookings.</li>
+            <li><strong>Cloudflare</strong> counts visits to the site without cookies.</li>
             <li><strong>GitHub</strong> hosts this website.</li>
             <li><strong>Our email provider</strong> stores our correspondence with you.</li>
           </ul>
@@ -97,11 +106,11 @@
         </div>
         <div>
           <h2>Product</h2>
-          <ul><li><a href="platform">Platform</a></li><li><a href="sample-report">Sample report</a></li><li><a href="platform#plans">Plans</a></li></ul>
+          <ul><li><a href="platform">Platform</a></li><li><a href="sample-report">Sample report</a></li><li><a href="platform#plans">Plans</a></li><li><a href="methodology">How our numbers work</a></li></ul>
         </div>
         <div>
           <h2>Company</h2>
-          <ul><li><a href="about">About</a></li><li><a href="contact">Contact</a></li><li><a href="mailto:info@innoraze.com">info@innoraze.com</a></li></ul>
+          <ul><li><a href="about">About</a></li><li><a href="contact">Contact</a></li><li><a href="https://www.linkedin.com/company/innoraze/" rel="noopener">LinkedIn</a></li><li><a href="mailto:info@innoraze.com">info@innoraze.com</a></li></ul>
         </div>
         <div>
           <h2>Legal</h2>
@@ -115,5 +124,6 @@
       </div>
     </div>
   </footer>
+  <button class="chat-launch" type="button" data-chat hidden aria-label="Chat with us"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z" fill="currentColor"/></svg><span class="chat-launch__text">Chat with us</span><i class="chat-launch__badge" hidden></i></button>
 </body>
 </html>

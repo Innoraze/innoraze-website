@@ -1002,3 +1002,70 @@ html:has(.subnav) { scroll-padding-top: 140px; }
 
 .hp-net { transition: fill 0.3s ease; }
 .hp-net.is-flash { fill: rgba(255, 106, 26, 0.28); stroke: rgba(255, 106, 26, 0.7); }
+
+/* ================================================================
+   Round 3: chat, booking, methodology
+   ================================================================ */
+
+/* Chat launcher (only shown once chat is switched on) */
+.chat-launch {
+  position: fixed; right: 20px; bottom: 20px; z-index: 60;
+  display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 16px;
+  border: 0; border-radius: 26px; cursor: pointer;
+  background: var(--pitch); color: var(--on-dark); font-weight: 600; font-size: 0.9375rem;
+  box-shadow: 0 12px 32px -12px rgba(16, 22, 19, 0.55), inset 0 0 0 1px rgba(244, 245, 242, 0.12);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.chat-launch[hidden] { display: none; }
+.chat-launch:hover { transform: translateY(-2px); background: var(--pitch-2); }
+.chat-launch svg { width: 20px; height: 20px; color: var(--oranje); }
+.chat-launch:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.chat-launch.is-loading svg { animation: chat-pulse 0.9s ease-in-out infinite; }
+@keyframes chat-pulse { 50% { opacity: 0.35; } }
+.chat-launch__badge { position: absolute; top: 6px; left: 30px; width: 10px; height: 10px; border-radius: 50%; background: var(--oranje); box-shadow: 0 0 0 2px var(--pitch); }
+.chat-launch__badge[hidden] { display: none; }
+@media (max-width: 560px) {
+  .chat-launch { width: 52px; padding: 0; justify-content: center; right: 16px; bottom: 16px; }
+  .chat-launch__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .chat-launch__badge { left: 30px; }
+}
+.hero2__pause { right: auto; left: var(--gutter); }
+
+/* Booking block on the contact page */
+.book { padding: 22px; margin-bottom: 32px; border-radius: 14px; background: var(--pitch); color: var(--on-dark); }
+.book[hidden] { display: none; }
+.book p { margin-top: 6px; color: var(--on-dark-2); }
+.book .btn { margin-top: 16px; }
+.contact__aside .book + .h3 { margin-top: 4px; }
+
+.defs__more { margin-top: 20px; }
+.flow--light li { border-top-color: var(--ink); }
+.flow--light p { color: var(--slate); }
+.flow--light .flow__n { color: var(--oranje-ink); }
+.defs--wide { margin-top: 0; }
+.defs--wide div { grid-template-columns: 14em 1fr; }
+.defs--wide dd { max-width: 44em; }
+@media (max-width: 560px) { .defs--wide div { grid-template-columns: 1fr; } }
+
+/* Expected goals explorer */
+.xg { align-items: start; }
+.xg__presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.xg__presets button {
+  font: inherit; font-size: 0.9375rem; font-weight: 500; cursor: pointer;
+  padding: 8px 14px; border-radius: 9px; border: 1px solid #c9cdc4; background: #fff; color: var(--ink);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.xg__presets button:hover { border-color: var(--ink); }
+.xg__presets button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--chalk); }
+.xg__note { margin-top: 24px; font-size: 0.9375rem; color: var(--slate); max-width: 34em; }
+.xg__window .window__body { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: center; }
+.xg-pitch { touch-action: none; cursor: crosshair; user-select: none; }
+.xg-pitch image { opacity: 0.9; }
+.xg-marker { fill: #fff; stroke: var(--pitch); stroke-width: 0.5; transition: r 0.15s ease; }
+.xg-cone { fill: rgba(255, 255, 255, 0.14); stroke: rgba(255, 255, 255, 0.55); stroke-width: 0.25; }
+.xg__value { display: flex; align-items: baseline; gap: 10px; }
+.xg__value .num { font-size: clamp(3.5rem, 2.5rem + 3vw, 5.5rem); line-height: 0.9; color: var(--on-dark); }
+.xg__value span:last-child { font-size: 1.25rem; color: var(--on-dark-3); }
+.xg__detail { margin-top: 14px; color: var(--on-dark-2); font-size: 0.9375rem; }
+.xg__plain { margin-top: 6px; color: var(--oranje-text); font-weight: 600; }
+@media (max-width: 1100px) { .xg__window .window__body { grid-template-columns: 1fr; } }

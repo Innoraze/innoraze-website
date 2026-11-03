@@ -30,6 +30,7 @@ After changing `assets/style.css`, `assets/app.js`, `assets/config.js` or the ic
 - `assets/app.js`: navigation, the match report replay, product animations, the matchweek story, the recruit window, the tracking replay, the sample report, the contact form and the demo booking window
 - `assets/fonts/`: Mona Sans, self-hosted under the SIL Open Font License (see `OFL.txt`)
 - `assets/logo.svg`, `assets/logo-light.svg`, `assets/favicon.svg`: logo files
+- `favicon.ico`: the browser-tab icon in the format search engines look for at the root of the site
 - `assets/og.png`: image shown when a link to the site is shared
 - `assets/xg-field.png`: the expected goals heat map on the methodology page
 

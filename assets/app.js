@@ -508,8 +508,8 @@
     var params = new URLSearchParams(window.location.search);
     var topic = params.get('topic');
     if (topic) { var r = $('[data-topic="' + topic + '"]', form); if (r) r.checked = true; }
-    var hint = $('[data-hint-report]', form);
-    var syncHint = function () { if (hint) hint.hidden = !$('[data-topic="report"]', form).checked; };
+    var hint = $('[data-hint-access]', form);
+    var syncHint = function () { if (hint) hint.hidden = !$('[data-topic="access"]', form).checked; };
     form.addEventListener('change', syncHint);
     syncHint();
     var status = $('[data-status]', form), submit = $('[data-submit]', form);
@@ -519,8 +519,8 @@
       box.setAttribute('tabindex', '-1');
       box.innerHTML = '<h2 class="h3">Request sent</h2><p></p>';
       box.querySelector('p').textContent = email
-        ? 'Thanks. We’ll reply to ' + email + ' within one working day.'
-        : 'Thanks. We’ll reply within one working day.';
+        ? 'Thanks. We’ll reply to ' + email + ' within two working days.'
+        : 'Thanks. We’ll reply within two working days.';
       form.parentNode.replaceChild(box, form);
       box.focus();
     };
@@ -595,12 +595,12 @@
     if (store.get('iz-chat') === '1') bootCrisp().catch(function () {});
   }
 
-  // Demo booking: "Book a demo" opens Arthur's calendar inside our own frame.
+  // Call booking: [data-book] buttons open the Calendly calendar inside our own frame.
   // BOOKING-START
   if (cfg.calendlyUrl) {
     $$('[data-book-block]').forEach(function (b) { b.hidden = false; });
     var bk = null;
-    var bkSub = '30 minutes with Arthur Ekwaba<span class="booking__role">, our founder</span>';
+    var bkSub = '30 minutes with the Innoraze team';
     var bkSrc = function () {
       return cfg.calendlyUrl + (cfg.calendlyUrl.indexOf('?') > -1 ? '&' : '?') +
         'embed_domain=' + encodeURIComponent(location.hostname || 'innoraze.com') +
@@ -613,7 +613,7 @@
       d.innerHTML =
         '<div class="booking__bar">' +
           '<svg class="booking__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#123b2c"/><path d="M7.5 24.5V11.5a13 13 0 0 1 13 13z" fill="#ff6a1a"/></svg>' +
-          '<div class="booking__head"><h2 class="booking__title" id="booking-title">Book a demo</h2>' +
+          '<div class="booking__head"><h2 class="booking__title" id="booking-title">Book a call</h2>' +
           '<p class="booking__sub">' + bkSub + '</p></div>' +
           '<button class="booking__close" type="button" aria-label="Close">' +
             '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" fill="none"/></svg>' +
@@ -621,7 +621,7 @@
         '</div>' +
         '<div class="booking__body">' +
           '<div class="booking__wait"><span class="booking__dots" aria-hidden="true"><i></i><i></i><i></i></span>' +
-          '<p class="booking__slow" hidden>The calendar is taking a while. You can also <a href="/contact?topic=demo" data-no-book>send us a request</a>.</p></div>' +
+          '<p class="booking__slow" hidden>The calendar is taking a while. You can also <a href="/contact" data-no-book>send us a request</a>.</p></div>' +
         '</div>';
       document.body.appendChild(d);
       var b = {
@@ -649,7 +649,7 @@
     var bkLoad = function () {
       var f = document.createElement('iframe');
       f.className = 'booking__frame';
-      f.title = 'Calendar for booking a demo';
+      f.title = 'Calendar for booking a call';
       f.src = bkSrc();
       // Calendly tells us when its page is drawn; this is only a backstop.
       f.addEventListener('load', function () { setTimeout(bkShow, 6000); });
@@ -663,7 +663,7 @@
       bk.body.classList.remove('is-ready');
       bk.d.style.removeProperty('--bk-h');
       bk.slow.hidden = true;
-      bk.title.textContent = 'Book a demo';
+      bk.title.textContent = 'Book a call';
       bk.sub.innerHTML = bkSub;
     };
     var bkOpen = function () {
@@ -697,7 +697,7 @@
       bkShow();
     });
     document.addEventListener('click', function (e) {
-      var trigger = e.target.closest('[data-book], a[href*="topic=demo"]');
+      var trigger = e.target.closest('[data-book]');
       if (!trigger || trigger.hasAttribute('data-no-book') || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       if (typeof HTMLDialogElement !== 'function') return;
       e.preventDefault();

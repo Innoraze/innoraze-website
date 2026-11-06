@@ -13,10 +13,10 @@ After changing `assets/style.css`, `assets/app.js`, `assets/config.js` or the ic
 | File | Page |
 | --- | --- |
 | `index.html` | Home |
-| `platform.html` | Platform and plans |
+| `platform.html` | Platform and early access |
 | `sample-report.html` | Interactive sample match report |
 | `about.html` | About |
-| `contact.html` | Demo, free report and pilot requests |
+| `contact.html` | Early access and build-update requests |
 | `methodology.html` | How our numbers work, with the expected goals explorer |
 | `privacy.html`, `terms.html` | Legal |
 | `404.html` | Not found |
@@ -24,10 +24,10 @@ After changing `assets/style.css`, `assets/app.js`, `assets/config.js` or the ic
 
 ## Assets
 
-- `assets/config.js`: switches for live chat (Crisp), demo booking (Calendly) and visitor numbers (Cloudflare Web Analytics). Paste an ID to turn one on.
+- `assets/config.js`: switches for live chat (Crisp), call booking (Calendly, off for now) and visitor numbers (Cloudflare Web Analytics). Paste an ID to turn one on.
 - `assets/style.css`: all styles
 - `assets/hero.js`: the homepage hero, a press-and-score move drawn on a pitch in perspective
-- `assets/app.js`: navigation, the match report replay, product animations, the matchweek story, the recruit window, the tracking replay, the sample report, the contact form and the demo booking window
+- `assets/app.js`: navigation, the match report replay, product animations, the matchweek story, the recruit window, the tracking replay, the sample report, the contact form and the call booking window
 - `assets/fonts/`: Mona Sans, self-hosted under the SIL Open Font License (see `OFL.txt`)
 - `assets/logo.svg`, `assets/logo-light.svg`, `assets/favicon.svg`: logo files
 - `favicon.ico`: the browser-tab icon in the format search engines look for at the root of the site

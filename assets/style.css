@@ -1136,3 +1136,11 @@ html.is-modal { overflow: hidden; }
 .xg__detail { margin-top: 14px; color: var(--on-dark-2); font-size: 0.9375rem; }
 .xg__plain { margin-top: 6px; color: var(--oranje-text); font-weight: 600; }
 @media (max-width: 1100px) { .xg__window .window__body { grid-template-columns: 1fr; } }
+
+/* In-development tag above the page titles */
+.status-tag { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; font-size: 0.875rem; font-weight: 600; color: var(--oranje-ink); }
+.status-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--oranje); box-shadow: 0 0 0 4px rgba(255, 106, 26, 0.18); }
+.dark .status-tag { color: var(--oranje-text); }
+
+/* About: more than one person in the team band */
+.founder__cards { display: grid; gap: 40px; }
